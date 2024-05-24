@@ -1,0 +1,83 @@
+# Ultralytics YOLO 🚀, AGPL-3.0 license
+# YOLOv8 object detection model with P3-P5 outputs. For Usage examples see https://docs.ultralytics.com/tasks/detect
+
+# Parameters
+nc: 80 # number of classes
+scales: # model compound scaling constants, i.e. 'model=yolov8n.yaml' will call yolov8.yaml with scale 'n'
+  # [depth, width, max_channels]
+  # n: [0.33, 0.25, 1024] # YOLOv8n summary: 225 layers,  3157200 parameters,  3157184 gradients,   8.9 GFLOPs
+  # s: [0.33, 0.50, 1024] # YOLOv8s summary: 225 layers, 11166560 parameters, 11166544 gradients,  28.8 GFLOPs
+  # m: [0.67, 0.75, 768] # YOLOv8m summary: 295 layers, 25902640 parameters, 25902624 gradients,  79.3 GFLOPs
+  # l: [1.00, 1.00, 256] # YOLOv8l summary: 365 layers, 43691520 parameters, 43691504 gradients, 165.7 GFLOPs
+  # x: [1.00, 1.25, 256] # YOLOv8x summary: 365 layers, 68229648 parameters, 68229632 gradients, 258.5 GFLOPs
+
+# YOLOv8.0n backbone
+backbone:
+  # [from, repeats, module, args]
+  - [-1, 1, Conv, [32, 3, 2]] # 0-P1/2
+  - [-1, 1, Conv, [64, 3, 2]] # 1-P2/4
+  - [-1, 1, C2f, [64, True]]
+  - [-1, 1, Conv, [128, 3, 2]] # 3-P3/8
+  - [-1, 2, C2f, [128, True]]
+  - [-1, 1, Conv, [256, 3, 2]] # 5-P4/16
+  - [-1, 2, C2f, [256, True]]
+  - [-1, 1, Conv, [256, 3, 2]] # 7-P5/32
+  - [-1, 1, C2f, [256, True]]
+  - [-1, 1, SPPF, [256, 5]] # 9
+
+# YOLOv8.0n head
+head:
+  - [[-1, 8], 1, Concat, [1]]
+  - [-1, 1, C2f, [256, False]] # 11 1/32
+  - [-1, 1, mamba_block, [256]] # 12 1/32
+  - [-1, 1, C2f, [256, False]] # 13 1/32
+  
+  - [11, 1, nn.Upsample, [None, 2, "nearest"]] # 14
+  - [12, 1, nn.Upsample, [None, 2, "nearest"]] # 15
+  - [13, 1, nn.Upsample, [None, 2, "nearest"]] # 16
+  
+  - [[6, 14, 15], 1, Concat, [1]]
+  - [-1, 1, C2f, [256, False]] # 18 1/16
+  - [[-1, 15, 16], 1, Concat, [1]]
+  - [-1, 1, Conv, [256, 1, 1]]
+  - [-1, 1, mamba_block, [256]] # 21 1/16
+  - [-1, 1, C2f, [256, False]] # 22 1/16
+  
+  - [18, 1, nn.Upsample, [None, 2, "nearest"]] # 23
+  - [21, 1, nn.Upsample, [None, 2, "nearest"]] # 24
+  - [22, 1, nn.Upsample, [None, 2, "nearest"]] # 25
+  
+  - [[4, 23, 24], 1, Concat, [1]]
+  - [-1, 1, C2f, [128, False]] # 27 1/8
+  - [[-1, 24, 25], 1, Concat, [1]]
+  - [-1, 1, Conv, [128, 1, 1]]
+  - [-1, 1, mamba_block, [128]] # 30 1/8
+  - [-1, 1, C2f, [128, False]] # 31 1/8
+  
+  - [27, 1, nn.Upsample, [None, 2, "nearest"]] # 32
+  - [30, 1, nn.Upsample, [None, 2, "nearest"]] # 33
+  - [31, 1, nn.Upsample, [None, 2, "nearest"]] # 34
+  
+  - [[2, 32, 33], 1, Concat, [1]]
+  - [-1, 1, C2f, [64, False]] # 36 1/4
+  - [[-1, 33, 34], 1, Concat, [1]]
+  - [-1, 1, Conv, [64, 1, 1]]
+  - [-1, 1, mamba_block, [64]] # 39 1/4
+  - [-1, 1, C2f, [64, False]] # 40 1/4
+  
+  - [-1, 1, Conv, [128, 3, 2]]
+  - [[-1, 31], 1, Concat, [1]]
+  - [-1, 1, C2f, [128, False]] # 43
+  - [-1, 1, Conv, [256, 3, 2]]
+  - [[-1, 22], 1, Concat, [1]]
+  - [-1, 1, C2f, [256, False]] # 46
+  - [-1, 1, Conv, [256, 3, 2]]
+  - [[-1, 13], 1, Concat, [1]]
+  - [-1, 1, C2f, [256, False]] # 49
+  
+  
+  - [[43, 46, 49], 1, Gated_Fusion, [[128, 256, 256]]] # 50 1/8
+  - [[46, 43, 49], 1, Gated_Fusion, [[256, 128, 256]]] # 51 1/16
+  - [[49, 43, 46], 1, Gated_Fusion, [[256, 128, 256]]] # 52 1/32
+  
+  - [[50, 51, 52], 1, Detect, [nc]] # Detect(P3, P4, P5)
