@@ -1,0 +1,6 @@
+name:0000066_01097_d_0000002 right:151 missing:124 error:18
+name:0000215_02667_d_0000262 right:57 missing:26 error:12
+name:0000155_00801_d_0000001 right:54 missing:52 error:11
+name:0000291_02001_d_0000878 right:78 missing:94 error:15
+name:0000129_02411_d_0000138 right:109 missing:77 error:4
+all_result: right:449 missing:373 error:60
