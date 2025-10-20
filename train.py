@@ -1,6 +1,6 @@
 from ultralytics import YOLO
 
-model = YOLO("/root/yourcfg.yaml")  # build a YOLOv8n model from scratch
+model = YOLO("cfg/yolo_mamba.yaml")  # build a YOLOv8n model from scratch
 
 model.info()  # display model information
 
